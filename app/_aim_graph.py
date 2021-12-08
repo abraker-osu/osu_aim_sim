@@ -34,9 +34,12 @@ class AimGraph(QtGui.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
 
+        DEV_GRAPH_HEIGHT = 64 + 4*AimGraph.SCALE
+        TITLE_PADDING = 32
+
         self.setWindowTitle('Aim visualization')
         self.setSizePolicy(QtGui.QSizePolicy.Policy.Maximum, QtGui.QSizePolicy.Policy.Maximum)
-        self.setMaximumSize(QtCore.QSize(AimGraph.SIZE, AimGraph.SIZE))
+        self.setMaximumSize(QtCore.QSize(AimGraph.SIZE + DEV_GRAPH_HEIGHT, AimGraph.SIZE + DEV_GRAPH_HEIGHT))
 
         self.main_layout = QtGui.QGridLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -44,17 +47,17 @@ class AimGraph(QtGui.QWidget):
         
         self.win_hits = pyqtgraph.PlotWidget(show=False, title='Hit visualization')
         self.win_hits.setWindowTitle('osu! Aim Tool Hit Visualization')
-        self.win_hits.setFixedSize(AimGraph.SIZE, AimGraph.SIZE + 32)
+        self.win_hits.setFixedSize(AimGraph.SIZE, AimGraph.SIZE)
 
         # Scatter plot for aim data
         self.plot_hits = self.win_hits.plot(title='Hit scatter')
+        self.win_hits.enableAutoRange(axis='x', enable=False)
+        self.win_hits.enableAutoRange(axis='y', enable=False)
         self.win_hits.hideAxis('left')
         self.win_hits.hideAxis('bottom')
         self.win_hits.setXRange(-AimGraph.SIZE/2, AimGraph.SIZE/2)
         self.win_hits.setYRange(-AimGraph.SIZE/2, AimGraph.SIZE/2)
         self.win_hits.getViewBox().setMouseEnabled(x=False, y=False)
-        self.win_hits.enableAutoRange(axis='x', enable=False)
-        self.win_hits.enableAutoRange(axis='y', enable=False)
         
         # Hit circle visualization
         self.circle_item = AimGraph.HitCircle((0, 0))
@@ -79,7 +82,7 @@ class AimGraph(QtGui.QWidget):
         self.dev_y.hideAxis('left')
         self.dev_y.showAxis('right')
         self.dev_y.setFixedWidth(64 + 4*AimGraph.SCALE)
-        self.dev_y.setYRange(-AimGraph.SIZE/2, AimGraph.SIZE/2)
+        self.dev_y.setYRange(-AimGraph.SIZE/2, AimGraph.SIZE/2 + TITLE_PADDING)
 
         # Cov area metrics
         self.text_info = pyqtgraph.TextItem('', anchor=(0, 0), )
