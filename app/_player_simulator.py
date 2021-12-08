@@ -24,24 +24,9 @@ class PlayerSimulator():
         self.player_vel_dev = data['player_vel_dev']
 
 
-
-    def run_simulation_old(self, data):
-        dist_x = data[:1, DataCor.IDX_X] - data[1:, DataCor.IDX_X]
-        dist_y = data[:1, DataCor.IDX_Y] - data[1:, DataCor.IDX_Y]
-
-        avg_vel = np.sqrt(dist_x**2 + dist_y**2)
-
-        for note in zip(data[1:], avg_vel):    
-            sim_tap = np.random.normal(loc=0.0, scale=self.player_tap_dev, size=None)
-            sim_vel = np.random.normal(loc=avg_vel, scale=self.player_vel_dev, size=None)
-            sim_rjudge = np.random.normal(loc=0.0, scale=self.player_rjudge_dev, size=None)
-
-        pass
-
-
     def run_simulation(self, map_data, mode=0):
         # Tick time of simulation in ms
-        simulation_step = 50
+        simulation_step = 10
 
         # Timings when player hits key to tap the note
         hit_timings = np.random.normal(0, self.hit_dev, len(map_data))
@@ -74,7 +59,7 @@ class PlayerSimulator():
 
         #time_start = time.time()
 
-        # For each ms
+        # For each simulations step
         for t in range(0, last_note_timing + 1, simulation_step):
             # If enough time has passed since the player last processed visual information
             if t - last_read_time >= read_period:
@@ -87,21 +72,20 @@ class PlayerSimulator():
                     read_note_pos = map_data[note_read_idx, DataCor.IDX_X]
                     read_time_to_note = 1000*map_data[note_read_idx, DataCor.IDX_T] - t
 
-                    # Time left until the note needs to be hit
-                    time_to_note = 1000*map_data[note_read_idx, DataCor.IDX_T] - t
-
-                    if time_to_note >= read_period:
+                    # If the note can be read within adequate time, break out of the loop
+                    if read_time_to_note >= read_period:
                         break
 
-                    # If time left until note needs to be hit is less than time needed
-                    # to process visual information, read the next note
-                    if time_to_note < read_period:
-                        # Make sure it's not the last note
-                        if note_read_idx < len(map_data) - 1:
-                            note_read_idx += 1
-                        # Otherwise there is nothing else left to read
-                        else:
-                            break
+                    # Make sure it's not the last note
+                    if note_read_idx >= len(map_data) - 1:
+                        break
+
+                    # Still focused on note acting on, no need to do anything else
+                    if note_read_idx >= note_act_idx:
+                        break
+
+                    # Read the next note
+                    note_read_idx += 1
 
                 # Judge whether current velocity is sufficient to hit the note
                 read_future_pos = cursor_pos + (cursor_vel * read_time_to_note)
@@ -113,32 +97,39 @@ class PlayerSimulator():
 
                 if read_is_undershoot or read_is_overshoot:
                     # Calculate target velocity
-                    target_vel = (read_note_pos - cursor_pos) / time_to_note
+                    target_vel = (read_note_pos - cursor_pos) / read_time_to_note
 
                     # Update velocity
-                    cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
+                    cursor_vel = target_vel #np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
+
+            '''
+            pos_to_note = map_data[note_act_idx, DataCor.IDX_X] - cursor_pos
+            time_to_note = 1000*map_data[note_act_idx, DataCor.IDX_T] - t
+
+            if time_to_note == 0:
+                cursor_vel = 0
+            else:
+                cursor_vel = pos_to_note / (1000*map_data[note_act_idx, DataCor.IDX_T] - t)
+            '''
 
             # Update cursor position
             cursor_pos += cursor_vel*simulation_step
 
-            # Determine if the player can hit the note
-            is_within_note = \
-                (cursor_pos >= map_data[note_act_idx, DataCor.IDX_X] - self.cs_px/2) and \
-                (cursor_pos <= map_data[note_act_idx, DataCor.IDX_X] + self.cs_px/2)     \
-            
             is_within_timing = \
-                (t >= 1000*map_data[note_act_idx, DataCor.IDX_T] - 2*self.hit_dev) and \
-                (t <= 1000*map_data[note_act_idx, DataCor.IDX_T] + 2*self.hit_dev)
+                (t >= 1000*map_data[note_act_idx, DataCor.IDX_T] - simulation_step/2) and \
+                (t <  1000*map_data[note_act_idx, DataCor.IDX_T] + simulation_step/2)
 
             is_late_timing = (t >= 1000*map_data[note_act_idx, DataCor.IDX_T] + 2*self.hit_dev)
 
-            #print(t, cursor_pos, map_data[note_act_idx, DataCor.IDX_T], map_data[note_act_idx, DataCor.IDX_X])
-            #input()
+            if is_within_timing:
+                note_timing = int(1000*map_data[note_act_idx, DataCor.IDX_T])
 
-            if is_within_note and is_within_timing:
+                #print(t, note_timing, int(cursor_pos), map_data[note_act_idx, DataCor.IDX_X], int(cursor_pos + cursor_vel*(note_timing - t)), cursor_vel*(note_timing - t))
+                #input()
+
                 # Simulate hit and record position
                 replay_data[note_act_idx, DataCor.IDX_T] = t/1000
-                replay_data[note_act_idx, DataCor.IDX_X] = int(cursor_pos + cursor_vel*hit_timings[note_act_idx])
+                replay_data[note_act_idx, DataCor.IDX_X] = int(cursor_pos + cursor_vel*(note_timing - t)) #int(cursor_pos + cursor_vel*hit_timings[note_act_idx])
                 replay_data[note_act_idx, DataCor.IDX_Y] = map_data[note_act_idx, DataCor.IDX_Y]
 
                 # If within the note, update note
