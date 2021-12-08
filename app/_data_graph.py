@@ -14,7 +14,7 @@ class DataGraph(QtGui.QWidget):
         self.__graph.getPlotItem().getAxis('bottom').enableAutoSIPrefix(False)
         self.__graph.enableAutoRange(axis='x', enable=False)
         self.__graph.enableAutoRange(axis='y', enable=False)
-        self.__graph.setLimits(xMin=0, xMax=5000, yMin=-10, yMax=200)
+        self.__graph.setLimits(xMin=0, xMax=5000, yMin=-10, yMax=1000)
         self.__graph.setRange(xRange=[-10, 600], yRange=[-10, 20])
         self.__graph.setLabel('left', 'deviation', units='σ', unitPrefix='')
         self.__graph.setLabel('bottom', 'velocity', units='osu!px/s', unitPrefix='')
