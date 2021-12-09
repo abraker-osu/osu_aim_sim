@@ -111,6 +111,8 @@ class PlayerSimulator():
                 #input()
                 
                 if read_is_undershoot or read_is_overshoot:
+                    # If the player perceived the trajectory to miss aim, simulate a
+                    # trajectory correction by the player
                     if read_time_to_note == 0:
                         # Avoid division by zero
                         target_vel = 0
@@ -121,6 +123,12 @@ class PlayerSimulator():
                     # Player perceives current velocity as sufficient to hit the note
                     target_vel = cursor_vel
 
+                '''
+                \FIXME: The `vel_dev` is needed to kinda simulate the player's misjudgment of
+                        how much force is needed to be applied to cursor/stylus when moving the 
+                        cursor to the note. However, this causes back and forth jump cursor behavior
+                        to be a lot more erradic then in reality, often overaiming in unrealistic amounts.
+                '''
                 # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error
                 cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
 
@@ -163,6 +171,14 @@ class PlayerSimulator():
 
             elif is_late_timing:
                 # Simulate hit and record position
+                '''
+                \FIXME: The cursor position is not accurate when applying hit_timing. This interpolates 
+                        based on current velocity and randomly chosen time of the hit, but interpolating based
+                        on current velocity is wrong because the velocity at the randomly chosen time of hit 
+                        can't be assumed to be the same to the current one. As a result, for back and forth
+                        jumps, this kinda ignores the expected behavior in deviation range where it bends
+                        back into the other direction
+                '''
                 replay_data[replay_idx, DataCor.IDX_T] = t/1000 + hit_timings[note_act_idx]/1000
                 replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos + cursor_vel*(note_timing - t) + cursor_vel*hit_timings[note_act_idx])
                 replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_act_idx, DataCor.IDX_Y]
