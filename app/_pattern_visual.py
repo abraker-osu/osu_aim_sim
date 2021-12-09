@@ -17,6 +17,7 @@ class PatternVisual(QtGui.QWidget):
         self.replay_data_x = None
         self.replay_data_y = None
         self.replay_data_t = None
+        self.replay_data_k = None
 
         self.cs    = None
         self.ar    = None
@@ -76,6 +77,7 @@ class PatternVisual(QtGui.QWidget):
         self.replay_data_x = replay_data[:, DataCor.IDX_X]
         self.replay_data_y = replay_data[:, DataCor.IDX_Y]
         self.replay_data_t = replay_data[:, DataCor.IDX_T]
+        self.replay_data_k = replay_data[:, DataCor.IDX_K]
 
         self.__draw_replay_data()
         self.visual.update()
@@ -123,7 +125,18 @@ class PatternVisual(QtGui.QWidget):
             raise AssertionError('len(self.replay_data_x) != len(self.replay_data_y) != len(self.replay_data_t)')
 
         select_time = (self.replay_data_t >= self.t - 0.2) & (self.replay_data_t <= self.t)
-        self.plot_cursor.setData(self.replay_data_x[select_time], self.replay_data_y[select_time])
+        
+        color_map = {
+           0 :  (255, 255, 0, 100),  # Yellow
+           1 :  (  0, 255, 0, 200),  # Green
+           2 :  (255,   0, 0, 200),  # Red
+        }
+
+        colors = [
+            color_map[key] for key in self.replay_data_k[select_time]
+        ]
+
+        self.plot_cursor.setData(self.replay_data_x[select_time], self.replay_data_y[select_time], symbolPen=colors)
 
 
     def __time_changed_event(self):
