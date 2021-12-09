@@ -117,9 +117,12 @@ class PlayerSimulator():
                     else:
                         # Calculate target velocity
                         target_vel = (read_note_pos - cursor_pos) / read_time_to_note
+                else:
+                    # Player perceives current velocity as sufficient to hit the note
+                    target_vel = cursor_vel
 
-                    # Update velocity
-                    cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
+                # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error
+                cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
 
             '''
             note_pos = map_data[note_act_idx, DataCor.IDX_X]
