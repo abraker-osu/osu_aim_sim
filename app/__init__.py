@@ -206,8 +206,8 @@ class App(QtGui.QMainWindow):
                 
                 dev_180deg[i, 0] = dev_x
 
-                self.graph.plot_data(dev_0deg[:i], angle=180, clear=True, model=True, color=(211, 145, 255))
-                self.graph.plot_data(dev_180deg[:i], angle=0, clear=False, model=True, color=(145, 189, 255))
+                self.graph.plot_data(dev_0deg[:i], angle=0, clear=True, model=True, color=(17, 89, 212))
+                self.graph.plot_data(dev_180deg[:i], angle=180, clear=False, model=True, color=(212, 17, 36))
 
                 QtWidgets.QApplication.processEvents()
 
