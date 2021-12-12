@@ -120,7 +120,11 @@ class PlayerSimulator():
             # If enough time has passed since the player last processed visual information
             if t - last_read_time >= read_period:
                 # Generate next time period it would take to process visual information
-                read_period = int(np.random.normal(self.avg_read_time, self.dev_read_time, None))
+                if self.dev_read_time == 0:
+                    read_period = self.avg_read_time
+                else:
+                    read_period = int(np.random.normal(self.avg_read_time, self.dev_read_time, None))
+
                 last_read_time = t
 
                 # Loop until reached a note that can be read in adequate time
@@ -172,6 +176,12 @@ class PlayerSimulator():
                 '''
                 # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error
                 cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
+
+                # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error'
+                if self.player_vel_dev == 0:
+                    cursor_vel = target_vel
+                else:
+                    cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
 
             # Aim processing
             if t > 1000*map_data[note_aim_idx, DataCor.IDX_T]:
