@@ -54,6 +54,7 @@ class App(QtGui.QMainWindow):
     def __run_one_simulation(self, mode=PlayerSimulator.RECORD_HITS):
         # Map wide data
         bpm = 500
+        dx  = 20  # distance
         cs  = 6
         ar  = 8
 
@@ -81,7 +82,7 @@ class App(QtGui.QMainWindow):
         # Generate stream pattern
         map_data_0 = App.OsuUtils.generate_pattern(
             initial_angle = 0,
-            distance      = 100,
+            distance      = dx,
             time          = 60/bpm, 
             angle         = 0 * math.pi/180, 
             n_points      = 1000 if (mode == App.PlayerSimulator.RECORD_HITS) else 200,
@@ -91,7 +92,7 @@ class App(QtGui.QMainWindow):
         # Generate back and forth jump pattern
         map_data_180 = App.OsuUtils.generate_pattern(
             initial_angle = 0,
-            distance      = 100,
+            distance      = dx,
             time          = 60/bpm,
             angle         = 180 * math.pi/180,
             n_points      = 1000 if not (mode == App.PlayerSimulator.RECORD_HITS) else 200,
