@@ -2,7 +2,7 @@ import pyqtgraph
 from pyqtgraph.Qt import QtGui
 
 from app.misc._osu_utils import OsuUtils
-from app.misc._data_cor import DataCor
+from app._data_cor import DataOsu
 
 
 class PatternVisual(QtGui.QWidget):
@@ -65,19 +65,19 @@ class PatternVisual(QtGui.QWidget):
 
 
     def set_map(self,  map_data):
-        self.map_data_x = map_data[:, DataCor.IDX_X]
-        self.map_data_y = map_data[:, DataCor.IDX_Y]
-        self.map_data_t = map_data[:, DataCor.IDX_T]
+        self.map_data_x = map_data[:, DataOsu.IDX_X]
+        self.map_data_y = map_data[:, DataOsu.IDX_Y]
+        self.map_data_t = map_data[:, DataOsu.IDX_T]
 
         self.__draw_map_data()
         self.visual.update()
 
     
     def set_replay(self, replay_data):
-        self.replay_data_x = replay_data[:, DataCor.IDX_X]
-        self.replay_data_y = replay_data[:, DataCor.IDX_Y]
-        self.replay_data_t = replay_data[:, DataCor.IDX_T]
-        self.replay_data_k = replay_data[:, DataCor.IDX_K]
+        self.replay_data_x = replay_data[:, DataOsu.IDX_X]
+        self.replay_data_y = replay_data[:, DataOsu.IDX_Y]
+        self.replay_data_t = replay_data[:, DataOsu.IDX_T]
+        self.replay_data_k = replay_data[:, DataOsu.IDX_K]
 
         self.__draw_replay_data()
         self.visual.update()

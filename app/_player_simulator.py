@@ -2,7 +2,7 @@ import numpy as np
 import math
 import time
 
-from app.misc._data_cor import DataCor
+from app._data_cor import DataOsu
 from app.misc._osu_utils import OsuUtils
 
 
@@ -44,8 +44,8 @@ class PlayerSimulator():
         simulation_step = 3     
 
         # Timing of the last note in the map
-        first_note_timing = int(1000*map_data[0, DataCor.IDX_T])
-        last_note_timing = int(1000*map_data[-1, DataCor.IDX_T])
+        first_note_timing = int(1000*map_data[0, DataOsu.IDX_T])
+        last_note_timing = int(1000*map_data[-1, DataOsu.IDX_T])
 
         # List of timings to be processed
         sim_timing_steps = range(
@@ -80,10 +80,12 @@ class PlayerSimulator():
         ###
 
         # Current note position
-        cursor_pos = map_data[0, DataCor.IDX_X]
+        cursor_pos_x = map_data[0, DataOsu.IDX_X]
+        cursor_pos_y = map_data[0, DataOsu.IDX_Y]
 
         # Current velocity of the cursor
-        cursor_vel = 0
+        cursor_vel_x = 0
+        cursor_vel_y = 0
 
         # Index of the note being aimed
         note_aim_idx = 0
@@ -93,7 +95,7 @@ class PlayerSimulator():
         ###
 
         # Timings when player hits key to tap the note
-        hit_timings = (np.random.normal(0, self.hit_dev, len(map_data)) + 1000*map_data[:, DataCor.IDX_T]).astype(np.int)
+        hit_timings = (np.random.normal(0, self.hit_dev, len(map_data)) + 1000*map_data[:, DataOsu.IDX_T]).astype(np.int)
         hit_timings = np.sort(hit_timings)
 
         # Index of the note being tapped
@@ -101,7 +103,7 @@ class PlayerSimulator():
 
         def get_act_params(note_act_idx):
             # Time of active note
-            note_timing = 1000*map_data[note_act_idx, DataCor.IDX_T]
+            note_timing = 1000*map_data[note_act_idx, DataOsu.IDX_T]
 
             # Time of active hit timing
             hit_timing = int(hit_timings[note_act_idx])
@@ -129,8 +131,9 @@ class PlayerSimulator():
 
                 # Loop until reached a note that can be read in adequate time
                 while True:
-                    read_note_pos = map_data[note_read_idx, DataCor.IDX_X]
-                    read_time_to_note = 1000*map_data[note_read_idx, DataCor.IDX_T] - t
+                    read_note_pos_x = map_data[note_read_idx, DataOsu.IDX_X]
+                    read_note_pos_y = map_data[note_read_idx, DataOsu.IDX_Y]
+                    read_time_to_note = 1000*map_data[note_read_idx, DataOsu.IDX_T] - t
 
                     # If the note can be read within adequate time, break out of the loop
                     if read_time_to_note >= read_period:
@@ -150,9 +153,13 @@ class PlayerSimulator():
 
                 # Judge whether current velocity is sufficient to hit the note
                 # Reading precision of note's center is depenent on how fast the pattern is
-                read_future_pos = cursor_pos + (cursor_vel * read_time_to_note)
-                read_is_undershoot = (read_future_pos < (read_note_pos - self.cs_px/4 * 4*cursor_vel))
-                read_is_overshoot  = (read_future_pos > (read_note_pos + self.cs_px/4 * 4*cursor_vel))
+                read_future_pos_x = cursor_pos_x + (cursor_vel_x * read_time_to_note)
+                read_is_undershoot_x = (read_future_pos_x < (read_note_pos_x - self.cs_px/4 * 4*cursor_vel_x))
+                read_is_overshoot_x  = (read_future_pos_x > (read_note_pos_x + self.cs_px/4 * 4*cursor_vel_x))
+
+                read_future_pos_y = cursor_pos_y + (cursor_vel_y * read_time_to_note)
+                read_is_undershoot_y = (read_future_pos_y < (read_note_pos_y - self.cs_px/4 * 4*cursor_vel_y))
+                read_is_overshoot_y  = (read_future_pos_y > (read_note_pos_y + self.cs_px/4 * 4*cursor_vel_y))
 
                 '''
                 \FIXME: For low enough distances, back-and-forth jumps break due to `4*cursor_vel` increasing
@@ -163,18 +170,21 @@ class PlayerSimulator():
                 #print(t, time_to_note, read_period, int(cursor_pos), read_future_pos, read_note_pos)
                 #input()
                 
-                if read_is_undershoot or read_is_overshoot:
+                if read_is_undershoot_x or read_is_overshoot_x or read_is_undershoot_y or read_is_overshoot_y:
                     # If the player perceived the trajectory to miss aim, simulate a
                     # trajectory correction by the player
                     if read_time_to_note == 0:
                         # Avoid division by zero
-                        target_vel = 0
+                        target_vel_x = 0
+                        target_vel_y = 0
                     else:
                         # Calculate target velocity
-                        target_vel = (read_note_pos - cursor_pos) / read_time_to_note
+                        target_vel_x = (read_note_pos_x - cursor_pos_x) / read_time_to_note
+                        target_vel_y = (read_note_pos_y - cursor_pos_y) / read_time_to_note
                 else:
                     # Player perceives current velocity as sufficient to hit the note
-                    target_vel = cursor_vel
+                    target_vel_x = cursor_vel_x
+                    target_vel_y = cursor_vel_y
 
                 '''
                 \FIXME: The `vel_dev` is needed to kinda simulate the player's misjudgment of
@@ -194,12 +204,14 @@ class PlayerSimulator():
 
                 # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error'
                 if self.player_vel_dev == 0:
-                    cursor_vel = target_vel
+                    cursor_vel_x = target_vel_x
+                    cursor_vel_y = target_vel_y
                 else:
-                    cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
+                    cursor_vel_x = np.random.normal(target_vel_x, abs(target_vel_x)*0.05*self.player_vel_dev, None)
+                    cursor_vel_y = np.random.normal(target_vel_y, abs(target_vel_y)*0.05*self.player_vel_dev, None)
 
             # Aim processing
-            if t > 1000*map_data[note_aim_idx, DataCor.IDX_T]:
+            if t > 1000*map_data[note_aim_idx, DataOsu.IDX_T]:
                 if note_aim_idx < len(map_data) - 1:
                     note_aim_idx += 1
 
@@ -213,7 +225,8 @@ class PlayerSimulator():
                 cursor_vel = (note_pos - cursor_pos) / time_to_note
             '''
 
-            cursor_pos += cursor_vel*simulation_step
+            cursor_pos_x += cursor_vel_x*simulation_step
+            cursor_pos_y += cursor_vel_y*simulation_step
 
             # Tap processing
             is_within_hit_timing = \
@@ -225,14 +238,14 @@ class PlayerSimulator():
                 #input()
 
                 # Simulate hit and record position
-                replay_data[replay_idx, DataCor.IDX_T] = t/1000
-                replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos)
-                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_tap_idx, DataCor.IDX_Y]
+                replay_data[replay_idx, DataOsu.IDX_T] = t/1000
+                replay_data[replay_idx, DataOsu.IDX_X] = int(cursor_pos_x)
+                replay_data[replay_idx, DataOsu.IDX_Y] = int(cursor_pos_y)
 
                 if is_late_timing:
-                    replay_data[replay_idx, DataCor.IDX_K] = PlayerSimulator.KEY_MISS
+                    replay_data[replay_idx, DataOsu.IDX_K] = PlayerSimulator.KEY_MISS
                 else:
-                    replay_data[replay_idx, DataCor.IDX_K] = PlayerSimulator.KEY_HIT
+                    replay_data[replay_idx, DataOsu.IDX_K] = PlayerSimulator.KEY_HIT
 
                 # If within the note, update note
                 if note_tap_idx < len(map_data) - 1:
@@ -242,9 +255,9 @@ class PlayerSimulator():
                 replay_idx += 1
 
             elif mode == PlayerSimulator.RECORD_REPLAY:
-                replay_data[replay_idx, DataCor.IDX_T] = t/1000
-                replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos)
-                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_tap_idx, DataCor.IDX_Y]
+                replay_data[replay_idx, DataOsu.IDX_T] = t/1000
+                replay_data[replay_idx, DataOsu.IDX_X] = int(cursor_pos_x)
+                replay_data[replay_idx, DataOsu.IDX_Y] = int(cursor_pos_y)
 
                 replay_idx += 1
 

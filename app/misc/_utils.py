@@ -5,6 +5,17 @@ import numpy as np
 class Utils():
 
     @staticmethod
+    def list_to_chunks(_list, num_per_chunk):
+        """
+        Splits a list into chunks of equal size.
+        :param list: list to split
+        :param num_per_chunk: number of elements per chunk
+        :return: list of chunks
+        """
+        return [ _list[i:i + num_per_chunk] for i in range(0, len(_list), num_per_chunk) ]
+
+
+    @staticmethod
     def normal_distr(x, avg, std):
         return 1/(std*((2*math.pi)**0.5))*math.exp(-0.5*((x - avg)/std)**2)
 

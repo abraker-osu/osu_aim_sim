@@ -16,8 +16,10 @@ class App(QtGui.QMainWindow):
     from ._player_simulator import PlayerSimulator
     from ._aim_graph import AimGraph
     from ._data_graph import DataGraph
+    from ._graph_skill import GraphSkill
+    from ._data_cor import DataOsu, DataDev
     from .misc._osu_utils import OsuUtils
-    from .misc._data_cor import DataCor
+
 
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
@@ -32,13 +34,15 @@ class App(QtGui.QMainWindow):
         self.map_visual_180deg = App.PatternVisual()
         self.aim_graph_0deg = App.AimGraph()
         self.aim_graph_180deg = App.AimGraph()
-        self.graph = App.DataGraph()
+        self.dev_graph = App.DataGraph()
+        self.skill_graph = App.GraphSkill() 
         
         self.main_widget.addTab(self.map_visual_0deg, '0 deg')
         self.main_widget.addTab(self.map_visual_180deg, '180 deg')
         self.main_widget.addTab(self.aim_graph_0deg, 'Aim graph 0 deg')
         self.main_widget.addTab(self.aim_graph_180deg, 'Aim graph 180 deg')
-        self.main_widget.addTab(self.graph, 'Graph')
+        self.main_widget.addTab(self.dev_graph, 'Deviation scatter')
+        self.main_widget.addTab(self.skill_graph, 'Skill graph')
 
         self.setCentralWidget(self.main_widget)
 
@@ -47,19 +51,19 @@ class App(QtGui.QMainWindow):
         self.show()
         
         #self.__run_one_simulation(mode=App.PlayerSimulator.RECORD_HITS)
-        #self.__run_one_simulation(mode=App.PlayerSimulator.RECORD_REPLAY)
-        self.__run_full_simulation()
+        self.__run_one_simulation(mode=App.PlayerSimulator.RECORD_REPLAY)
+        #self.__run_full_simulation()
 
 
     def __run_one_simulation(self, mode=PlayerSimulator.RECORD_HITS):
         # Map wide data
-        bpm = 500
-        dx  = 20  # distance
+        bpm = 400
+        dx  = 100  # distance
         cs  = 6
         ar  = 8
 
         # Player wide data
-        hit_dev       = 15    # Hit deviation (in ms @ 95% confidence interval))
+        hit_dev       = 10    # Hit deviation (in ms @ 95% confidence interval))
         avg_read_time = 1     # Human update interval mean (in ms)
         dev_read_time = 0     # Human update interval deviation (in ms)
         vel_dev       = 0     # Velocity deviation (in osu!px / ms)
@@ -84,7 +88,7 @@ class App(QtGui.QMainWindow):
             initial_angle = 0,
             distance      = dx,
             time          = 60/bpm, 
-            angle         = 0 * math.pi/180, 
+            angle         = 30 * math.pi/180, 
             n_points      = 1000 if (mode == App.PlayerSimulator.RECORD_HITS) else 200,
             n_repeats     = 1
         )
@@ -105,12 +109,12 @@ class App(QtGui.QMainWindow):
         replay_data_0deg = self.player_simulator.run_simulation(map_data_0, mode=mode)
         replay_data_180deg = self.player_simulator.run_simulation(map_data_180, mode=mode)
 
-        hit_select_0deg = (replay_data_0deg[:, App.DataCor.IDX_K] > App.PlayerSimulator.KEY_NONE)
+        hit_select_0deg = (replay_data_0deg[:, App.DataOsu.IDX_K] > App.PlayerSimulator.KEY_NONE)
         aim_x_offsets, aim_y_offsets = self.__process_data(map_data_0, replay_data_0deg[hit_select_0deg])
         self.aim_graph_0deg.set_cs(cs)
         self.aim_graph_0deg.plot_data(aim_x_offsets, aim_y_offsets)
 
-        hit_select_180deg = (replay_data_180deg[:, App.DataCor.IDX_K] > App.PlayerSimulator.KEY_NONE)
+        hit_select_180deg = (replay_data_180deg[:, App.DataOsu.IDX_K] > App.PlayerSimulator.KEY_NONE)
         aim_x_offsets, aim_y_offsets = self.__process_data(map_data_180, replay_data_180deg[hit_select_180deg])
         self.aim_graph_180deg.set_cs(cs)
         self.aim_graph_180deg.plot_data(aim_x_offsets, aim_y_offsets)
@@ -132,10 +136,10 @@ class App(QtGui.QMainWindow):
         vel_dev       = 10    # Velocity deviation (in osu!px / ms)
         '''
 
-        hit_dev       = 15    # Hit deviation (in ms @ 95% confidence interval))
-        avg_read_time = 1     # Human update interval mean (in ms)
-        dev_read_time = 0     # Human update interval deviation (in ms)
-        vel_dev       = 0     # Velocity deviation (in osu!px / ms)
+        hit_dev       = 10    # Hit deviation (in ms @ 95% confidence interval))
+        avg_read_time = 1    # Human update interval mean (in ms)
+        dev_read_time = 0    # Human update interval deviation (in ms)
+        vel_dev       = 0    # Velocity deviation (in osu!px / ms)
         
         # Simulate player
         self.player_simulator = App.PlayerSimulator({
@@ -146,94 +150,68 @@ class App(QtGui.QMainWindow):
             'player_vel_dev' : vel_dev,
         })
 
-        
         self.map_visual_180deg.set_ar(ar)
         self.map_visual_180deg.set_cs(cs)
 
         self.map_visual_0deg.set_ar(ar)
         self.map_visual_0deg.set_cs(cs)
 
-        note_bpms = list(range(120, 200, 5))
-        note_dists = list(range(50, 110, 5))
+        note_bpms = list(range(60, 600, 10))
+        note_dists = list(range(40, 500, 10))
+        note_angles = [ 0, 10, 30, 90, 180]
 
-        dev_0deg = np.zeros((len(note_bpms) * len(note_dists), 3))
-        dev_180deg = np.zeros((len(note_bpms) * len(note_dists), 3))
+        dev_data = np.zeros((len(note_bpms) * len(note_dists) * len(note_angles), 4))
 
         i = -1
 
         for note_bpm in note_bpms:
             for note_dist in note_dists:
-                print(f'Running simulation for bpm={note_bpm} dist={note_dist}')
+                for note_angle in note_angles:
+                    print(f'Running simulation for bpm={note_bpm} dist={note_dist}')
 
-                i += 1
+                    i += 1
 
-                dev_0deg[i, 1] = note_dist
-                dev_180deg[i, 1] = note_dist
+                    dev_data[i, App.DataDev.COL_DEV]   = self.__run_simulation_map(note_angle, note_dist, note_bpm)
+                    dev_data[i, App.DataDev.COL_PX]    = note_dist
+                    dev_data[i, App.DataDev.COL_BPM]   = note_bpm
+                    dev_data[i, App.DataDev.COL_ANGLE] = note_angle
+                    
+                    self.dev_graph.plot_data(dev_data[:i], model=True)
+                    self.skill_graph.plot_data(dev_data[:i])
 
-                dev_0deg[i, 2] = note_bpm
-                dev_180deg[i, 2] = note_bpm
-
-                # Generate stream pattern
-                map_data_0 = App.OsuUtils.generate_pattern(
-                    initial_angle = 0,
-                    distance      = note_dist,
-                    time          = 60/note_bpm, 
-                    angle         = 0 * math.pi/180, 
-                    n_points      = 30,
-                    n_repeats     = 1
-                )
-
-                # Generate back and forth jump pattern
-                map_data_180 = App.OsuUtils.generate_pattern(
-                    initial_angle = 0,
-                    distance      = note_dist,
-                    time          = 60/note_bpm,
-                    angle         = 180 * math.pi/180,
-                    n_points      = 60,
-                    n_repeats     = 1
-                )
-
-                replay_data_0deg = self.player_simulator.run_simulation(map_data_0)
-                aim_x_offsets, aim_y_offsets = self.__process_data(map_data_0, replay_data_0deg)
-                dev_x = np.std(aim_x_offsets)
-
-                QtWidgets.QApplication.processEvents()
-
-                dev_0deg[i, 0] = dev_x
-
-                replay_data_180deg = self.player_simulator.run_simulation(map_data_180)
-                aim_x_offsets, aim_y_offsets = self.__process_data(map_data_180, replay_data_180deg)
-                dev_x = np.std(aim_x_offsets)
-                
-                dev_180deg[i, 0] = dev_x
-
-                self.graph.plot_data(dev_0deg[:i], angle=0, clear=True, model=True, color=(17, 89, 212))
-                self.graph.plot_data(dev_180deg[:i], angle=180, clear=False, model=True, color=(212, 17, 36))
-
-                QtWidgets.QApplication.processEvents()
-
-        self.map_visual_0deg.set_map(map_data_0)
-        self.map_visual_180deg.set_map(map_data_180)
-
-        self.map_visual_0deg.set_replay(replay_data_0deg)
-        self.map_visual_180deg.set_replay(replay_data_180deg)
-
-        self.graph.plot_data(dev_0deg[:i], angle=180, clear=True, model=True, color=(211, 145, 255))
-        self.graph.plot_data(dev_180deg[:i], angle=0, clear=False, model=True, color=(145, 189, 255))
-
-        #print(f'0 deg,   dev = {dev_0deg[:, 0]}')
-        #print(f'180 deg, dev = {dev_180deg[:, 0]}')
+                    QtWidgets.QApplication.processEvents()
 
         
+    def __run_simulation_map(self, note_angle, note_dist, note_bpm):
+        # Generate stream pattern
+        map_data = App.OsuUtils.generate_pattern(
+            initial_angle = 0,
+            distance      = note_dist,
+            time          = 60/note_bpm, 
+            angle         = note_angle * math.pi/180, 
+            n_points      = 15,
+            n_repeats     = 1
+        )
+
+        replay_data = self.player_simulator.run_simulation(map_data)
+        aim_x_offsets, aim_y_offsets = self.__process_data(map_data, replay_data)
+        
+        dev_x = np.std(aim_x_offsets)
+        dev_y = np.std(aim_y_offsets)
+        dev = math.sqrt(dev_x**2 + dev_y**2)
+
+        return dev
+
+
     def __process_data(self, map_data, replay_data):
         # Process data
-        tap_offsets   = map_data[:, App.DataCor.IDX_T] - replay_data[:, App.DataCor.IDX_T]
-        aim_x_offsets = map_data[:, App.DataCor.IDX_X] - replay_data[:, App.DataCor.IDX_X]
-        aim_y_offsets = map_data[:, App.DataCor.IDX_Y] - replay_data[:, App.DataCor.IDX_Y]
+        tap_offsets   = map_data[:, App.DataOsu.IDX_T] - replay_data[:, App.DataOsu.IDX_T]
+        aim_x_offsets = map_data[:, App.DataOsu.IDX_X] - replay_data[:, App.DataOsu.IDX_X]
+        aim_y_offsets = map_data[:, App.DataOsu.IDX_Y] - replay_data[:, App.DataOsu.IDX_Y]
         
         # Correct for incoming direction
-        x_map_vecs = map_data[1:, App.DataCor.IDX_X] - map_data[:-1, App.DataCor.IDX_X]
-        y_map_vecs = map_data[1:, App.DataCor.IDX_Y] - map_data[:-1, App.DataCor.IDX_Y]
+        x_map_vecs = map_data[1:, App.DataOsu.IDX_X] - map_data[:-1, App.DataOsu.IDX_X]
+        y_map_vecs = map_data[1:, App.DataOsu.IDX_Y] - map_data[:-1, App.DataOsu.IDX_Y]
 
         map_thetas = np.arctan2(y_map_vecs, x_map_vecs)
         hit_thetas = np.arctan2(aim_y_offsets, aim_x_offsets)
