@@ -20,7 +20,7 @@ class OsuUtils():
             n_repeats: the pattern is played this many times, reversing direction on each repeat
         
         returns:
-            np.array of [[x, y, t] for points in pattern]
+            np.array of [[t, x, y] for points in pattern]
         """
         dists  = np.array(distance, dtype='f').flatten()
         times  = np.array(time, dtype='f').flatten()
@@ -47,7 +47,7 @@ class OsuUtils():
         delta_ts = np.pad(delta_ts, (1, (n_repeats - 1)*n_points), mode='symmetric')
         delta_ts[0] = 0
 
-        data = np.column_stack((points, np.cumsum(delta_ts)))
+        data = np.column_stack((np.cumsum(delta_ts), points))
 
         return data
 

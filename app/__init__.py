@@ -5,6 +5,8 @@ import numpy as np
 import pyqtgraph
 from pyqtgraph.Qt import QtGui
 
+np.set_printoptions(suppress=True)
+
 
 
 class App(QtGui.QMainWindow):
@@ -42,7 +44,7 @@ class App(QtGui.QMainWindow):
 
     def __run(self):
         self.show()
-
+        
         #self.__run_one_simulation(mode=App.PlayerSimulator.RECORD_HITS)
         #self.__run_one_simulation(mode=App.PlayerSimulator.RECORD_REPLAY)
         self.__run_full_simulation()
@@ -50,15 +52,15 @@ class App(QtGui.QMainWindow):
 
     def __run_one_simulation(self, mode=PlayerSimulator.RECORD_HITS):
         # Map wide data
-        bpm = 200
+        bpm = 500
         cs  = 6
         ar  = 8
 
         # Player wide data
-        hit_dev       = 12    # Hit deviation (in ms @ 95% confidence interval))
-        avg_read_time = 70   # Human update interval mean (in ms)
+        hit_dev       = 15    # Hit deviation (in ms @ 95% confidence interval))
+        avg_read_time = 1     # Human update interval mean (in ms)
         dev_read_time = 0     # Human update interval deviation (in ms)
-        vel_dev       = 2     # Velocity deviation (in osu!px / ms)
+        vel_dev       = 0     # Velocity deviation (in osu!px / ms)
         
         # Simulate player
         self.player_simulator = App.PlayerSimulator({
@@ -81,7 +83,7 @@ class App(QtGui.QMainWindow):
             distance      = 100,
             time          = 60/bpm, 
             angle         = 0 * math.pi/180, 
-            n_points      = 1000 if (mode == App.PlayerSimulator.RECORD_HITS) else 60,
+            n_points      = 1000 if (mode == App.PlayerSimulator.RECORD_HITS) else 200,
             n_repeats     = 1
         )
 
@@ -91,7 +93,7 @@ class App(QtGui.QMainWindow):
             distance      = 100,
             time          = 60/bpm,
             angle         = 180 * math.pi/180,
-            n_points      = 1000 if not (mode == App.PlayerSimulator.RECORD_HITS) else 60,
+            n_points      = 1000 if not (mode == App.PlayerSimulator.RECORD_HITS) else 200,
             n_repeats     = 1
         )
 
@@ -122,10 +124,17 @@ class App(QtGui.QMainWindow):
         ar  = 8
 
         # Player wide data
+        '''
         hit_dev       = 18   # Hit deviation (in ms @ 95% confidence interval))
         avg_read_time = 140   # Human update interval mean (in ms)
         dev_read_time = 10    # Human update interval deviation (in ms)
         vel_dev       = 10    # Velocity deviation (in osu!px / ms)
+        '''
+
+        hit_dev       = 15    # Hit deviation (in ms @ 95% confidence interval))
+        avg_read_time = 1     # Human update interval mean (in ms)
+        dev_read_time = 0     # Human update interval deviation (in ms)
+        vel_dev       = 0     # Velocity deviation (in osu!px / ms)
         
         # Simulate player
         self.player_simulator = App.PlayerSimulator({
@@ -143,8 +152,8 @@ class App(QtGui.QMainWindow):
         self.map_visual_0deg.set_ar(ar)
         self.map_visual_0deg.set_cs(cs)
 
-        note_bpms = list(range(120, 480, 25))
-        note_dists = list(range(50, 510, 25))
+        note_bpms = list(range(120, 200, 5))
+        note_dists = list(range(50, 110, 5))
 
         dev_0deg = np.zeros((len(note_bpms) * len(note_dists), 3))
         dev_180deg = np.zeros((len(note_bpms) * len(note_dists), 3))

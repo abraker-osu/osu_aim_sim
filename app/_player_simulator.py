@@ -31,14 +31,40 @@ class PlayerSimulator():
         # Player's deviation of applied velocity (osu!px/ms @ 95% confidence interval)
         self.player_vel_dev = data['player_vel_dev']
 
+        print(self.hit_dev, self.avg_read_time, self.dev_read_time, self.player_vel_dev)
+
 
     # If mode is 0, record just hits scoring, if it's 1 record as if replay
     def run_simulation(self, map_data, mode=RECORD_HITS):
-        # Tick time of simulation in ms
-        simulation_step = 10
+        ###
+        ### Parameters related to replay recording
+        ###
 
-        # Timings when player hits key to tap the note
-        hit_timings = np.random.normal(0, self.hit_dev, len(map_data))
+        # Tick time of simulation in ms
+        simulation_step = 3     
+
+        # Timing of the last note in the map
+        first_note_timing = int(1000*map_data[0, DataCor.IDX_T])
+        last_note_timing = int(1000*map_data[-1, DataCor.IDX_T])
+
+        # List of timings to be processed
+        sim_timing_steps = range(
+            first_note_timing - 6*self.hit_dev - simulation_step, 
+            last_note_timing  + 6*self.hit_dev + simulation_step, 
+            simulation_step
+        )
+        
+        if mode == PlayerSimulator.RECORD_HITS:
+            replay_data = np.zeros((len(map_data), 4))
+        else:
+            replay_data = np.zeros((len(sim_timing_steps), 4))
+
+        # Keep track of replay frame being recorded
+        replay_idx = 0
+        
+        ###
+        ### Parameters related to note being read
+        ###
 
         # Time period it takes for player to processes visual information at this moment
         read_period = int(np.random.normal(self.avg_read_time, self.dev_read_time, None))
@@ -48,9 +74,10 @@ class PlayerSimulator():
 
         # Index of the note being read
         note_read_idx = 0
-
-        # Index of the note being acted upon
-        note_act_idx = 0
+        
+        ###
+        ### Parameters related to note being aimed
+        ###
 
         # Current note position
         cursor_pos = map_data[0, DataCor.IDX_X]
@@ -58,19 +85,33 @@ class PlayerSimulator():
         # Current velocity of the cursor
         cursor_vel = 0
 
-        # Timing of the last note in the map
-        last_note_timing = int(1000*map_data[-1, DataCor.IDX_T])
+        # Index of the note being aimed
+        note_aim_idx = 0
 
-        # List of timings to be processed
-        sim_timing_steps = range(0, last_note_timing + simulation_step, simulation_step)
-        
-        if mode == PlayerSimulator.RECORD_HITS:
-            replay_data = np.zeros((len(map_data), 4))
-        else:
-            replay_data = np.zeros((len(sim_timing_steps), 4))
+        ###
+        ### Parameters related to note being tapped
+        ###
 
-        # Keep track of replay frame being recorded
-        replay_idx = 0
+        # Timings when player hits key to tap the note
+        hit_timings = (np.random.normal(0, self.hit_dev, len(map_data)) + 1000*map_data[:, DataCor.IDX_T]).astype(np.int)
+        hit_timings = np.sort(hit_timings)
+
+        # Index of the note being tapped
+        note_tap_idx = 0
+
+        def get_act_params(note_act_idx):
+            # Time of active note
+            note_timing = 1000*map_data[note_act_idx, DataCor.IDX_T]
+
+            # Time of active hit timing
+            hit_timing = int(hit_timings[note_act_idx])
+
+            # Flag indicating whether the generated hit timing is >100 ms late
+            is_late_timing = note_timing < (hit_timing - 100)
+
+            return hit_timing, is_late_timing
+
+        hit_timing, is_late_timing = get_act_params(note_tap_idx)
 
         #time_start = time.time()
 
@@ -96,7 +137,7 @@ class PlayerSimulator():
                         break
 
                     # Check if still focused on note acting on, no need to do anything else if so
-                    if note_read_idx >= note_act_idx:
+                    if note_read_idx >= note_aim_idx:
                         break
 
                     # Read the next note
@@ -132,9 +173,14 @@ class PlayerSimulator():
                 # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error
                 cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
 
+            # Aim processing
+            if t > 1000*map_data[note_aim_idx, DataCor.IDX_T]:
+                if note_aim_idx < len(map_data) - 1:
+                    note_aim_idx += 1
+
             '''
-            note_pos = map_data[note_act_idx, DataCor.IDX_X]
-            time_to_note = 1000*map_data[note_act_idx, DataCor.IDX_T] - t
+            note_pos = map_data[note_aim_idx, DataCor.IDX_X]
+            time_to_note = 1000*map_data[note_aim_idx, DataCor.IDX_T] - t
 
             if time_to_note == 0:
                 cursor_vel = 0
@@ -142,60 +188,41 @@ class PlayerSimulator():
                 cursor_vel = (note_pos - cursor_pos) / time_to_note
             '''
 
-            # Update cursor position
             cursor_pos += cursor_vel*simulation_step
 
-            is_within_timing = \
-                (t >= 1000*map_data[note_act_idx, DataCor.IDX_T] - simulation_step/2) and \
-                (t <  1000*map_data[note_act_idx, DataCor.IDX_T] + simulation_step/2)
+            # Tap processing
+            is_within_hit_timing = \
+                (t >= hit_timing - simulation_step/2) and \
+                (t <  hit_timing + simulation_step/2)
 
-            is_late_timing = (t >= 1000*map_data[note_act_idx, DataCor.IDX_T] + 2*self.hit_dev)
-
-            if is_within_timing:
-                note_timing = int(1000*map_data[note_act_idx, DataCor.IDX_T])
-
+            if is_within_hit_timing:
                 #print(t, note_timing, int(cursor_pos), map_data[note_act_idx, DataCor.IDX_X], int(cursor_pos + cursor_vel*(note_timing - t)), cursor_vel*(note_timing - t))
                 #input()
 
                 # Simulate hit and record position
-                replay_data[replay_idx, DataCor.IDX_T] = t/1000 + hit_timings[note_act_idx]/1000
-                replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos + cursor_vel*(note_timing - t) + cursor_vel*hit_timings[note_act_idx])
-                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_act_idx, DataCor.IDX_Y]
-                replay_data[replay_idx, DataCor.IDX_K] = PlayerSimulator.KEY_HIT
+                replay_data[replay_idx, DataCor.IDX_T] = t/1000
+                replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos)
+                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_tap_idx, DataCor.IDX_Y]
+
+                if is_late_timing:
+                    replay_data[replay_idx, DataCor.IDX_K] = PlayerSimulator.KEY_MISS
+                else:
+                    replay_data[replay_idx, DataCor.IDX_K] = PlayerSimulator.KEY_HIT
 
                 # If within the note, update note
-                if note_act_idx < len(map_data) - 1:
-                    note_act_idx += 1
-
-                replay_idx += 1
-
-            elif is_late_timing:
-                # Simulate hit and record position
-                '''
-                \FIXME: The cursor position is not accurate when applying hit_timing. This interpolates 
-                        based on current velocity and randomly chosen time of the hit, but interpolating based
-                        on current velocity is wrong because the velocity at the randomly chosen time of hit 
-                        can't be assumed to be the same to the current one. As a result, for back and forth
-                        jumps, this kinda ignores the expected behavior in deviation range where it bends
-                        back into the other direction
-                '''
-                replay_data[replay_idx, DataCor.IDX_T] = t/1000 + hit_timings[note_act_idx]/1000
-                replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos + cursor_vel*(note_timing - t) + cursor_vel*hit_timings[note_act_idx])
-                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_act_idx, DataCor.IDX_Y]
-                replay_data[replay_idx, DataCor.IDX_K] = PlayerSimulator.KEY_MISS
-
-                # If within the note, update note
-                if note_act_idx < len(map_data) - 1:
-                    note_act_idx += 1
+                if note_tap_idx < len(map_data) - 1:
+                    note_tap_idx += 1
+                    hit_timing, is_late_timing = get_act_params(note_tap_idx)
 
                 replay_idx += 1
 
             elif mode == PlayerSimulator.RECORD_REPLAY:
                 replay_data[replay_idx, DataCor.IDX_T] = t/1000
                 replay_data[replay_idx, DataCor.IDX_X] = int(cursor_pos)
-                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_act_idx, DataCor.IDX_Y]
+                replay_data[replay_idx, DataCor.IDX_Y] = map_data[note_tap_idx, DataCor.IDX_Y]
 
                 replay_idx += 1
+
             
         #print(f'elapsed: {time.time() - time_start}')
 

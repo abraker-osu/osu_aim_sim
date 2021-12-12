@@ -124,7 +124,7 @@ class PatternVisual(QtGui.QWidget):
         if len(self.replay_data_x) != len(self.replay_data_y) != len(self.replay_data_t):
             raise AssertionError('len(self.replay_data_x) != len(self.replay_data_y) != len(self.replay_data_t)')
 
-        select_time = (self.replay_data_t >= self.t - 0.2) & (self.replay_data_t <= self.t)
+        select_time = (self.replay_data_t >= self.t - 0.05) & (self.replay_data_t <= self.t)
         
         color_map = {
            0 :  (255, 255, 0, 100),  # Yellow
