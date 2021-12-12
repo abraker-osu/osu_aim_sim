@@ -4,6 +4,7 @@ import numpy as np
 
 import pyqtgraph
 from pyqtgraph.Qt import QtGui
+from pyqtgraph.Qt import QtWidgets
 
 np.set_printoptions(suppress=True)
 
