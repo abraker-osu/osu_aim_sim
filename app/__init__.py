@@ -119,7 +119,6 @@ class App(QtGui.QMainWindow):
 
     def __run_full_simulation(self):
         # Map wide data
-        bpm = 100
         cs  = 6
         ar  = 8
 
@@ -194,6 +193,8 @@ class App(QtGui.QMainWindow):
                 aim_x_offsets, aim_y_offsets = self.__process_data(map_data_0, replay_data_0deg)
                 dev_x = np.std(aim_x_offsets)
 
+                QtWidgets.QApplication.processEvents()
+
                 dev_0deg[i, 0] = dev_x
 
                 replay_data_180deg = self.player_simulator.run_simulation(map_data_180)
@@ -201,6 +202,11 @@ class App(QtGui.QMainWindow):
                 dev_x = np.std(aim_x_offsets)
                 
                 dev_180deg[i, 0] = dev_x
+
+                self.graph.plot_data(dev_0deg[:i], True, 'y')
+                self.graph.plot_data(dev_180deg[:i], False, 'g')
+
+                QtWidgets.QApplication.processEvents()
 
         self.map_visual_0deg.set_map(map_data_0)
         self.map_visual_180deg.set_map(map_data_180)
@@ -210,9 +216,6 @@ class App(QtGui.QMainWindow):
 
         #print(f'0 deg,   dev = {dev_0deg[:, 0]}')
         #print(f'180 deg, dev = {dev_180deg[:, 0]}')
-
-        self.graph.plot_data(dev_0deg, True, 'y')
-        self.graph.plot_data(dev_180deg, False, 'g')
 
         
     def __process_data(self, map_data, replay_data):
