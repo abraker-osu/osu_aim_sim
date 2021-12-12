@@ -161,6 +161,8 @@ class App(QtGui.QMainWindow):
 
         for note_bpm in note_bpms:
             for note_dist in note_dists:
+                print(f'Running simulation for bpm={note_bpm} dist={note_dist}')
+
                 i += 1
 
                 dev_0deg[i, 1] = note_dist
