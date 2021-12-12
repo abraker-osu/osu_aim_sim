@@ -46,8 +46,6 @@ class DataGraph(QtGui.QWidget):
         vels = data[:, 1]*data[:, 2]/60
         devs = data[:, 0]
 
-        self.__graph.plot(x=vels, y=devs, pen=None, symbol='o', symbolPen=None, symbolSize=5, symbolBrush=color)
-
         # Calc linear regression
         m, b = Utils.linear_regresion(vels, devs)
         if type(m) == type(None) or type(b) == type(None):
@@ -63,5 +61,6 @@ class DataGraph(QtGui.QWidget):
         m_se_95 = (m_dev_y/m_dev_x)/math.sqrt(devs.shape[0] - 2)*1.96
 
         label = f'∠={angle:.2f}  n={devs.shape[0]}  σ={m_dev_y:.2f}  m={m:.5f}±{m_se_95:.5f}  b={b:.2f}'
-        self.__graph.plot(x=[0, max(vels)], y=[b, m*max(vels) + b], pen=(100, 100, 0, 150), name=label)  
+        self.__graph.plot(x=vels, y=devs, pen=None, symbol='o', symbolPen=None, symbolSize=5, symbolBrush=color, name=label)
+        self.__graph.plot(x=[0, max(vels)], y=[b, m*max(vels) + b], pen=(100, 100, 0, 150))  
 
