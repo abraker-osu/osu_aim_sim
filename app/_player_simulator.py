@@ -140,7 +140,8 @@ class PlayerSimulator():
                     if note_read_idx >= len(map_data) - 1:
                         break
 
-                    # Check if still focused on note acting on, no need to do anything else if so
+                    # Check if still focused on note being aimed, 
+                    # no need to start reading next note if not finished aiming this one
                     if note_read_idx >= note_aim_idx:
                         break
 
@@ -152,6 +153,12 @@ class PlayerSimulator():
                 read_future_pos = cursor_pos + (cursor_vel * read_time_to_note)
                 read_is_undershoot = (read_future_pos < (read_note_pos - self.cs_px/4 * 4*cursor_vel))
                 read_is_overshoot  = (read_future_pos > (read_note_pos + self.cs_px/4 * 4*cursor_vel))
+
+                '''
+                \FIXME: For low enough distances, back-and-forth jumps break due to `4*cursor_vel` increasing
+                        perceived circle center area large enough for simulation to think it can continue and
+                        not reverse direction.
+                '''
 
                 #print(t, time_to_note, read_period, int(cursor_pos), read_future_pos, read_note_pos)
                 #input()
@@ -175,8 +182,15 @@ class PlayerSimulator():
                         cursor to the note. However, this causes back and forth jump cursor behavior
                         to be a lot more erradic then in reality, often overaiming in unrealistic amounts.
                 '''
-                # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error
-                cursor_vel = np.random.normal(target_vel, abs(target_vel)*0.05*self.player_vel_dev, None)
+
+                '''
+                \FIXME: The cursor is allowed to change velocity an arbitrarily high number. This
+                        occurs when some distance away from note, but there is very short time to
+                        hit it. This undermines momentum such that the player cannot accelerate the
+                        cursor faster than a certain amount. This is probably irrelevent for the purpose
+                        of this project, but it does ruin the simulation under certain conditions, causing
+                        the cursor to fly off.
+                '''
 
                 # Update velocity; The player iteratively corrects their velocity when aim for note +/- some error'
                 if self.player_vel_dev == 0:
