@@ -206,8 +206,8 @@ class App(QtGui.QMainWindow):
                 
                 dev_180deg[i, 0] = dev_x
 
-                self.graph.plot_data(dev_0deg[:i], True, 'y')
-                self.graph.plot_data(dev_180deg[:i], False, 'g')
+                self.graph.plot_data(dev_0deg[:i], angle=180, clear=True, model=True, color=(211, 145, 255))
+                self.graph.plot_data(dev_180deg[:i], angle=0, clear=False, model=True, color=(145, 189, 255))
 
                 QtWidgets.QApplication.processEvents()
 
@@ -216,6 +216,9 @@ class App(QtGui.QMainWindow):
 
         self.map_visual_0deg.set_replay(replay_data_0deg)
         self.map_visual_180deg.set_replay(replay_data_180deg)
+
+        self.graph.plot_data(dev_0deg[:i], angle=180, clear=True, model=True, color=(211, 145, 255))
+        self.graph.plot_data(dev_180deg[:i], angle=0, clear=False, model=True, color=(145, 189, 255))
 
         #print(f'0 deg,   dev = {dev_0deg[:, 0]}')
         #print(f'180 deg, dev = {dev_180deg[:, 0]}')
