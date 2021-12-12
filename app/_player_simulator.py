@@ -148,9 +148,10 @@ class PlayerSimulator():
                     note_read_idx += 1
 
                 # Judge whether current velocity is sufficient to hit the note
+                # Reading precision of note's center is depenent on how fast the pattern is
                 read_future_pos = cursor_pos + (cursor_vel * read_time_to_note)
-                read_is_undershoot = (read_future_pos < (read_note_pos - self.cs_px/2))
-                read_is_overshoot  = (read_future_pos > (read_note_pos + self.cs_px/2))
+                read_is_undershoot = (read_future_pos < (read_note_pos - self.cs_px/4 * 4*cursor_vel))
+                read_is_overshoot  = (read_future_pos > (read_note_pos + self.cs_px/4 * 4*cursor_vel))
 
                 #print(t, time_to_note, read_period, int(cursor_pos), read_future_pos, read_note_pos)
                 #input()
